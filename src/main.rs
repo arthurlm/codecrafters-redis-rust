@@ -1,22 +1,21 @@
-// Uncomment this block to pass the first stage
-// use std::net::TcpListener;
+use tokio::net::{TcpListener, TcpStream};
 
-fn main() {
-    // You can use print statements as follows for debugging, they'll be visible when running tests.
-    println!("Logs from your program will appear here!");
+#[tokio::main]
+async fn main() {
+    let listener = TcpListener::bind("127.0.0.1:6379").await.unwrap();
 
-    // Uncomment this block to pass the first stage
-    //
-    // let listener = TcpListener::bind("127.0.0.1:6379").unwrap();
-    //
-    // for stream in listener.incoming() {
-    //     match stream {
-    //         Ok(_stream) => {
-    //             println!("accepted new connection");
-    //         }
-    //         Err(e) => {
-    //             println!("error: {}", e);
-    //         }
-    //     }
-    // }
+    loop {
+        match listener.accept().await {
+            Ok((stream, _addr)) => {
+                tokio::task::spawn(handle_client(stream));
+            }
+            Err(e) => {
+                eprintln!("error: {}", e);
+            }
+        }
+    }
+}
+
+async fn handle_client(stream: TcpStream) {
+    println!("accepted new connection");
 }
