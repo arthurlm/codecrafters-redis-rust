@@ -1,4 +1,7 @@
-use tokio::net::{TcpListener, TcpStream};
+use tokio::{
+    io::{AsyncReadExt, AsyncWriteExt},
+    net::{TcpListener, TcpStream},
+};
 
 #[tokio::main]
 async fn main() {
@@ -16,6 +19,12 @@ async fn main() {
     }
 }
 
-async fn handle_client(stream: TcpStream) {
-    println!("accepted new connection");
+async fn handle_client(mut stream: TcpStream) -> anyhow::Result<()> {
+    loop {
+        let mut buf = vec![0_u8; 10];
+        stream.read_buf(&mut buf).await?;
+
+        stream.write_all(b"+PONG\r\n").await?;
+        stream.flush().await?;
+    }
 }
