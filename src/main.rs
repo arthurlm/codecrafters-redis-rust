@@ -1,5 +1,6 @@
+use redis_starter_rust::{request::Request, response::Response};
 use tokio::{
-    io::{AsyncReadExt, AsyncWriteExt},
+    io::{BufReader, BufWriter},
     net::{TcpListener, TcpStream},
 };
 
@@ -19,12 +20,21 @@ async fn main() {
     }
 }
 
-async fn handle_client(mut stream: TcpStream) -> anyhow::Result<()> {
-    loop {
-        let mut buf = vec![0_u8; 10];
-        stream.read_buf(&mut buf).await?;
+async fn handle_client(stream: TcpStream) -> anyhow::Result<()> {
+    let (reader, writer) = stream.into_split();
+    let mut buf_reader = BufReader::new(reader);
+    let mut buf_writer = BufWriter::new(writer);
 
-        stream.write_all(b"+PONG\r\n").await?;
-        stream.flush().await?;
+    loop {
+        let request = Request::read(&mut buf_reader).await?;
+
+        let response = match request {
+            Request::Ping => Response::Pong,
+            Request::UnhandledCommand => {
+                Response::Error("BAD_CMD Invalid command received".to_string())
+            }
+        };
+
+        response.write(&mut buf_writer).await?;
     }
 }
