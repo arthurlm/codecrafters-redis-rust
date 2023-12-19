@@ -1,10 +1,14 @@
-use std::collections::HashMap;
+use std::{
+    collections::HashMap,
+    time::{Duration, Instant},
+};
 
 use tokio::sync::RwLock;
 
 #[derive(Debug, Default)]
 pub struct Database {
     content: RwLock<HashMap<Vec<u8>, Vec<u8>>>,
+    expiry: RwLock<HashMap<Vec<u8>, Instant>>,
 }
 
 impl Database {
@@ -19,7 +23,25 @@ impl Database {
         self.content.write().await.insert(key, value);
     }
 
+    pub async fn expire_in(&self, key: &[u8], ms_delta: u64) {
+        let key = key.to_vec();
+        let expire_at = Instant::now() + Duration::from_millis(ms_delta);
+
+        self.expiry.write().await.insert(key, expire_at);
+    }
+
     pub async fn get(&self, key: &[u8]) -> Option<Vec<u8>> {
-        self.content.read().await.get(key).cloned()
+        let content = self.content.read().await.get(key).cloned();
+        let expire_at = self.expiry.read().await.get(key).copied();
+
+        // Check if key is expired
+        if matches!(expire_at, Some(val) if val < Instant::now()) {
+            // Do some cleanup
+            self.content.write().await.remove(key);
+            self.expiry.write().await.remove(key);
+            return None;
+        }
+
+        content
     }
 }
