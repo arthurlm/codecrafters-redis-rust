@@ -5,6 +5,7 @@ use crate::{error::MiniRedisError, resp2::Message};
 #[derive(Debug, PartialEq, Eq)]
 pub enum Request {
     Ping,
+    Echo(Vec<u8>),
     UnhandledCommand,
 }
 
@@ -14,7 +15,12 @@ impl Request {
 
         match &msg {
             Message::Array(args) => match &args[..] {
+                // Debug commands
                 [Message::Binary(arg1)] if arg1 == b"PING" => Ok(Self::Ping),
+                [Message::Binary(arg1), Message::Binary(data)] if arg1 == b"ECHO" => {
+                    Ok(Self::Echo(data.clone()))
+                }
+                // Unhandled command
                 _ => {
                     eprintln!("Unhandled command: {msg:?}");
                     Ok(Self::UnhandledCommand)

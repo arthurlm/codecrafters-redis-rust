@@ -30,6 +30,7 @@ async fn handle_client(stream: TcpStream) -> anyhow::Result<()> {
 
         let response = match request {
             Request::Ping => Response::Pong,
+            Request::Echo(data) => Response::Echo(data),
             Request::UnhandledCommand => {
                 Response::Error("BAD_CMD Invalid command received".to_string())
             }
