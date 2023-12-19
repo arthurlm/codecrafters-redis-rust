@@ -6,8 +6,14 @@ use crate::resp2::Message;
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum Response {
+    // Debug response
     Pong,
     Echo(Vec<u8>),
+    // Get & Set response
+    Ok,
+    NoContent,
+    Content(Vec<u8>),
+    // Unhandled command
     Error(String),
 }
 
@@ -16,6 +22,9 @@ impl Response {
         let msg = match self {
             Response::Pong => Message::text("PONG"),
             Response::Echo(data) => Message::bin(data),
+            Response::Ok => Message::text("OK"),
+            Response::NoContent => Message::Null,
+            Response::Content(data) => Message::bin(data),
             Response::Error(msg) => Message::error(msg),
         };
 
