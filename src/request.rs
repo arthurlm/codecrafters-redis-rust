@@ -8,6 +8,7 @@ pub enum Request {
     Echo(Vec<u8>),
     Get(Vec<u8>),
     Set(Vec<u8>, Vec<u8>),
+    SetExpire(Vec<u8>, Vec<u8>, u64),
     UnhandledCommand,
 }
 
@@ -34,6 +35,14 @@ impl Request {
                     if arg1.eq_ignore_ascii_case(b"SET") =>
                 {
                     Self::Set(key.to_vec(), value.to_vec())
+                }
+                [Message::Binary(arg1), Message::Binary(key), Message::Binary(value), Message::Binary(arg_px), Message::Binary(expiry_raw)]
+                    if arg1.eq_ignore_ascii_case(b"SET") && arg_px.eq_ignore_ascii_case(b"PX") =>
+                {
+                    let ms_delta = String::from_utf8_lossy(expiry_raw)
+                        .parse()
+                        .unwrap_or_default();
+                    Self::SetExpire(key.to_vec(), value.to_vec(), ms_delta)
                 }
                 // Unhandled command
                 _ => {

@@ -42,6 +42,11 @@ async fn handle_client(stream: TcpStream, db: Arc<Database>) -> anyhow::Result<(
                 db.set(&key, &value).await;
                 Response::Ok
             }
+            Request::SetExpire(key, value, ms_delta) => {
+                db.set(&key, &value).await;
+                db.expire_in(&key, ms_delta).await;
+                Response::Ok
+            }
             Request::UnhandledCommand => {
                 Response::Error("BAD_CMD Invalid command received".to_string())
             }
