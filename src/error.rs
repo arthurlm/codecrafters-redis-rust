@@ -1,4 +1,4 @@
-use std::{io, num::ParseIntError, string::FromUtf8Error};
+use std::{io, num::ParseIntError, str::Utf8Error, string::FromUtf8Error};
 
 use thiserror::Error;
 
@@ -18,6 +18,12 @@ pub enum MiniRedisError {
 
     #[error("Invalid message end")]
     InvalidMessageEnd,
+
+    #[error("Invalid RDB magic number")]
+    InvalidRdbMagicNumber,
+
+    #[error("Unsupported length encoding")]
+    UnsupportedLengthEncoding,
 }
 
 impl From<io::Error> for MiniRedisError {
@@ -28,6 +34,12 @@ impl From<io::Error> for MiniRedisError {
 
 impl From<FromUtf8Error> for MiniRedisError {
     fn from(err: FromUtf8Error) -> Self {
+        Self::InvalidText(err.to_string())
+    }
+}
+
+impl From<Utf8Error> for MiniRedisError {
+    fn from(err: Utf8Error) -> Self {
         Self::InvalidText(err.to_string())
     }
 }
