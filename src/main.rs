@@ -82,24 +82,24 @@ async fn handle_client(
         let response = match request {
             Request::Ping => Response::Pong,
             Request::Echo(data) => Response::Echo(data),
-            Request::Get(key) => match db.get(&key).await {
+            Request::Get(key) => match db.get(key).await {
                 Some(data) => Response::Content(data),
                 None => Response::NoContent,
             },
             Request::Set(key, value) => {
-                db.set(&key, &value).await;
+                db.set(key, value).await;
                 Response::Ok
             }
             Request::SetExpire(key, value, ms_delta) => {
-                db.set(&key, &value).await;
-                db.expire_in_millis(&key, ms_delta).await;
+                db.set(key.clone(), value).await;
+                db.expire_in_millis(key, ms_delta).await;
                 Response::Ok
             }
             Request::Keys => {
                 let keys = db.keys().await;
                 Response::KeyMatches(keys)
             }
-            Request::ConfigGet(key) => match config.get(&key).await {
+            Request::ConfigGet(key) => match config.get(key.clone()).await {
                 Some(value) => Response::ConfigGet(key, value),
                 None => Response::NoContent,
             },

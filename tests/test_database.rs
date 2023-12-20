@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use redis_starter_rust::database::Database;
+use redis_starter_rust::{database::Database, rdb::RedisString};
 
 #[tokio::test]
 async fn test_database_get_set() {
@@ -11,11 +11,11 @@ async fn test_database_get_set() {
 
     // Set and get
     database.set(b"foo", b"hello").await;
-    assert_eq!(database.get(b"foo").await, Some(b"hello".to_vec()));
+    assert_eq!(database.get(b"foo").await, Some(RedisString::new(b"hello")));
 
     // Update and get
     database.set(b"foo", b"world").await;
-    assert_eq!(database.get(b"foo").await, Some(b"world".to_vec()));
+    assert_eq!(database.get(b"foo").await, Some(RedisString::new(b"world")));
 }
 
 #[tokio::test]
@@ -28,7 +28,7 @@ async fn test_database_expire_in() {
     // Set and get
     database.set(b"foo", b"hello").await;
     database.expire_in_millis(b"foo", 100).await;
-    assert_eq!(database.get(b"foo").await, Some(b"hello".to_vec()));
+    assert_eq!(database.get(b"foo").await, Some(RedisString::new(b"hello")));
 
     // Wait and get
     tokio::time::sleep(Duration::from_millis(250)).await;

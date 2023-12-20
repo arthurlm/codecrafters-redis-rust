@@ -5,10 +5,12 @@ use std::{
 
 use tokio::{join, sync::RwLock};
 
+use crate::rdb::RedisString;
+
 #[derive(Debug, Default)]
 pub struct Database {
-    content: RwLock<HashMap<Vec<u8>, Vec<u8>>>,
-    expiry_millis: RwLock<HashMap<Vec<u8>, u64>>,
+    content: RwLock<HashMap<RedisString, RedisString>>,
+    expiry_millis: RwLock<HashMap<RedisString, u64>>,
 }
 
 impl Database {
@@ -16,38 +18,54 @@ impl Database {
         Self::default()
     }
 
-    pub async fn set(&self, key: &[u8], value: &[u8]) {
-        let key = key.to_vec();
-        let value = value.to_vec();
+    pub async fn set<K, V>(&self, key: K, value: V)
+    where
+        K: Into<RedisString>,
+        V: Into<RedisString>,
+    {
+        let key = key.into();
+        let value = value.into();
 
         self.content.write().await.insert(key, value);
     }
 
-    pub async fn expire_at_millis(&self, key: &[u8], timestamp: u64) {
-        let key = key.to_vec();
+    pub async fn expire_at_millis<K>(&self, key: K, timestamp: u64)
+    where
+        K: Into<RedisString>,
+    {
+        let key = key.into();
+
         self.expiry_millis.write().await.insert(key, timestamp);
     }
 
-    pub async fn expire_in_millis(&self, key: &[u8], delta: u64) {
+    pub async fn expire_in_millis<K>(&self, key: K, delta: u64)
+    where
+        K: Into<RedisString>,
+    {
         self.expire_at_millis(key, now_unix_millis() + delta).await;
     }
 
-    pub async fn get(&self, key: &[u8]) -> Option<Vec<u8>> {
-        let content = self.content.read().await.get(key).cloned();
-        let expire_at = self.expiry_millis.read().await.get(key).copied();
+    pub async fn get<K>(&self, key: K) -> Option<RedisString>
+    where
+        K: Into<RedisString>,
+    {
+        let key = key.into();
+
+        let content = self.content.read().await.get(&key).cloned();
+        let expire_at = self.expiry_millis.read().await.get(&key).copied();
 
         // Check if key is expired
         if matches!(expire_at, Some(val) if val < now_unix_millis()) {
             // Do some cleanup
-            self.content.write().await.remove(key);
-            self.expiry_millis.write().await.remove(key);
+            self.content.write().await.remove(&key);
+            self.expiry_millis.write().await.remove(&key);
             return None;
         }
 
         content
     }
 
-    pub async fn keys(&self) -> Vec<Vec<u8>> {
+    pub async fn keys(&self) -> Vec<RedisString> {
         let (content, expiry_millis) = join!(self.content.read(), self.expiry_millis.read());
         let now = now_unix_millis();
 

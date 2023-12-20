@@ -147,6 +147,24 @@ impl RedisString {
     }
 }
 
+impl From<Vec<u8>> for RedisString {
+    fn from(value: Vec<u8>) -> Self {
+        Self(value)
+    }
+}
+
+impl From<&[u8]> for RedisString {
+    fn from(value: &[u8]) -> Self {
+        value.to_vec().into()
+    }
+}
+
+impl<const T: usize> From<&[u8; T]> for RedisString {
+    fn from(value: &[u8; T]) -> Self {
+        value.as_slice().into()
+    }
+}
+
 impl TryFrom<RedisString> for String {
     type Error = FromUtf8Error;
 
