@@ -44,4 +44,9 @@ impl Database {
 
         content
     }
+
+    pub async fn keys(&self) -> Vec<Vec<u8>> {
+        let content = self.content.read().await;
+        content.keys().cloned().collect()
+    }
 }

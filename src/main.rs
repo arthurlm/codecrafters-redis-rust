@@ -92,6 +92,10 @@ async fn handle_client(
                 db.expire_in(&key, ms_delta).await;
                 Response::Ok
             }
+            Request::Keys => {
+                let keys = db.keys().await;
+                Response::KeyMatches(keys)
+            }
             Request::ConfigGet(key) => match config.get(&key).await {
                 Some(value) => Response::ConfigGet(key, value),
                 None => Response::NoContent,

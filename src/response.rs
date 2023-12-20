@@ -13,6 +13,8 @@ pub enum Response {
     Ok,
     NoContent,
     Content(Vec<u8>),
+    // Key matches
+    KeyMatches(Vec<Vec<u8>>),
     // Config get
     ConfigGet(Vec<u8>, Vec<u8>),
     // Unhandled command
@@ -27,6 +29,9 @@ impl Response {
             Response::Ok => Message::text("OK"),
             Response::NoContent => Message::Null,
             Response::Content(data) => Message::bin(data),
+            Response::KeyMatches(keys) => {
+                Message::Array(keys.into_iter().map(|key| Message::bin(key)).collect())
+            }
             Response::ConfigGet(key, value) => {
                 Message::Array(vec![Message::bin(key), Message::bin(value)])
             }
