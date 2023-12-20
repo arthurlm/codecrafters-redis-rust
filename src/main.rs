@@ -35,6 +35,9 @@ async fn main() {
         for (key, value) in rdb.values {
             database.set(key.as_slice(), value.as_slice()).await;
         }
+        for (key, value) in rdb.expiry {
+            database.expire_at_millis(key.as_slice(), value).await;
+        }
     }
 
     // Startup server
@@ -89,7 +92,7 @@ async fn handle_client(
             }
             Request::SetExpire(key, value, ms_delta) => {
                 db.set(&key, &value).await;
-                db.expire_in(&key, ms_delta).await;
+                db.expire_in_millis(&key, ms_delta).await;
                 Response::Ok
             }
             Request::Keys => {

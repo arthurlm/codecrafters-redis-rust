@@ -27,7 +27,7 @@ async fn test_database_expire_in() {
 
     // Set and get
     database.set(b"foo", b"hello").await;
-    database.expire_in(b"foo", 100).await;
+    database.expire_in_millis(b"foo", 100).await;
     assert_eq!(database.get(b"foo").await, Some(b"hello".to_vec()));
 
     // Wait and get
