@@ -9,6 +9,7 @@ pub enum Request {
     Get(Vec<u8>),
     Set(Vec<u8>, Vec<u8>),
     SetExpire(Vec<u8>, Vec<u8>, u64),
+    ConfigGet(Vec<u8>),
     UnhandledCommand,
 }
 
@@ -44,6 +45,14 @@ impl Request {
                         .unwrap_or_default();
                     Self::SetExpire(key.to_vec(), value.to_vec(), ms_delta)
                 }
+                // Config get
+                [Message::Binary(arg1), Message::Binary(arg2), Message::Binary(key)]
+                    if arg1.eq_ignore_ascii_case(b"CONFIG")
+                        && arg2.eq_ignore_ascii_case(b"GET") =>
+                {
+                    Self::ConfigGet(key.to_vec())
+                }
+
                 // Unhandled command
                 _ => {
                     eprintln!("Unhandled command: {msg:?}");

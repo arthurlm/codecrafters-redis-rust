@@ -13,6 +13,8 @@ pub enum Response {
     Ok,
     NoContent,
     Content(Vec<u8>),
+    // Config get
+    ConfigGet(Vec<u8>, Vec<u8>),
     // Unhandled command
     Error(String),
 }
@@ -25,6 +27,9 @@ impl Response {
             Response::Ok => Message::text("OK"),
             Response::NoContent => Message::Null,
             Response::Content(data) => Message::bin(data),
+            Response::ConfigGet(key, value) => {
+                Message::Array(vec![Message::bin(key), Message::bin(value)])
+            }
             Response::Error(msg) => Message::error(msg),
         };
 
