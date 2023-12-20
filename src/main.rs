@@ -1,21 +1,43 @@
-use std::{env, os::unix::ffi::OsStrExt, path::PathBuf, sync::Arc};
+use std::{
+    env,
+    os::unix::ffi::OsStrExt,
+    path::{Path, PathBuf},
+    sync::Arc,
+};
 
-use redis_starter_rust::{database::Database, request::Request, response::Response};
+use redis_starter_rust::{
+    database::Database, error::MiniRedisError, rdb::Rdb, request::Request, response::Response,
+};
 use tokio::{
+    fs,
     io::{BufReader, BufWriter},
     net::{TcpListener, TcpStream},
 };
 
 #[tokio::main]
 async fn main() {
-    let dir = parse_cli_dir().unwrap_or_else(|| env::temp_dir());
-    let dbfilename = parse_cli_dbfilename().unwrap_or_else(|| "dump.rdb".to_string());
+    let dir = parse_cli_dir().unwrap_or_else(env::temp_dir);
+    let dbfilename = parse_cli_dbfilename().unwrap_or_else(|| PathBuf::from("dump.rdb"));
 
+    // Create DBs
     let config = Arc::new(Database::new());
     config.set(b"dir", dir.as_os_str().as_bytes()).await;
-    config.set(b"dbfilename", dbfilename.as_bytes()).await;
+    config
+        .set(b"dbfilename", dbfilename.as_os_str().as_bytes())
+        .await;
 
     let database = Arc::new(Database::new());
+
+    // Apply CLI args
+    env::set_current_dir(&dir).expect("Fail to set current dir");
+    if dbfilename.exists() {
+        let rdb = read_rdb(&dbfilename).await.expect("Fail to read .rdb file");
+        for (key, value) in rdb.values {
+            database.set(key.as_slice(), value.as_slice()).await;
+        }
+    }
+
+    // Startup server
     let listener = TcpListener::bind("127.0.0.1:6379").await.unwrap();
 
     loop {
@@ -32,14 +54,14 @@ async fn main() {
 
 fn parse_cli_dir() -> Option<PathBuf> {
     let index = env::args().position(|x| x == "--dir")?;
-    let addr = env::args().nth(index + 1)?;
-    addr.parse().ok()
+    let value = env::args().nth(index + 1)?;
+    value.parse().ok()
 }
 
-fn parse_cli_dbfilename() -> Option<String> {
+fn parse_cli_dbfilename() -> Option<PathBuf> {
     let index = env::args().position(|x| x == "--dbfilename")?;
-    let addr = env::args().nth(index + 1)?;
-    Some(addr)
+    let value = env::args().nth(index + 1)?;
+    value.parse().ok()
 }
 
 async fn handle_client(
@@ -81,4 +103,10 @@ async fn handle_client(
 
         response.write(&mut buf_writer).await?;
     }
+}
+
+async fn read_rdb<P: AsRef<Path>>(path: P) -> Result<Rdb, MiniRedisError> {
+    let file = fs::File::open(path).await?;
+    let mut reader = BufReader::new(file);
+    Rdb::read(&mut reader).await
 }
