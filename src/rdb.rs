@@ -12,7 +12,7 @@ pub struct Rdb {
     pub aux_ctime: Option<String>,
     pub aux_used_men: Option<String>,
     pub values: HashMap<RedisString, RedisString>,
-    pub expiry: HashMap<RedisString, RedisString>,
+    pub expiry: HashMap<RedisString, u64>,
 }
 
 impl Rdb {
@@ -28,6 +28,7 @@ impl Rdb {
         input.read_exact(&mut version_bytes).await?;
         let version: u32 = std::str::from_utf8(&version_bytes)?.parse()?;
 
+        let mut next_expire_ms = None;
         let mut output = Self {
             version,
             ..Default::default()
@@ -72,11 +73,27 @@ impl Rdb {
                     output.values.reserve(db_values_size as usize);
                     output.expiry.reserve(db_expiry_size as usize);
                 }
+                // Expire time millis
+                0xFC => {
+                    let expire_at = input.read_u64_le().await?;
+                    next_expire_ms = Some(expire_at);
+                }
+                // Expire time secs
+                0xFD => {
+                    let expire_at = input.read_u32_le().await?;
+                    next_expire_ms = Some(expire_at as u64 * 1000);
+                }
+
                 // Key / values
                 // type: String
                 0x00 => {
                     let key = RedisString::read(input).await?;
                     let value = RedisString::read(input).await?;
+
+                    if let Some(expire_at) = next_expire_ms.take() {
+                        output.expiry.insert(key.clone(), expire_at);
+                    }
+
                     output.values.insert(key, value);
                 }
                 // End of file
@@ -89,7 +106,7 @@ impl Rdb {
     }
 }
 
-#[derive(PartialEq, Eq, Hash)]
+#[derive(PartialEq, Eq, Hash, Clone)]
 pub struct RedisString(Vec<u8>);
 
 impl RedisString {

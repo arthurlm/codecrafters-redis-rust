@@ -59,3 +59,22 @@ async fn test_parse_single_key() {
         })
     );
 }
+
+#[tokio::test]
+async fn test_parse_multi_key_expire() {
+    assert_eq!(
+        make_rdb(include_bytes!("./data/multi-key-expire.rdb")).await,
+        Ok(rdb::Rdb {
+            version: 11,
+            aux_redis_ver: Some("7.2.3".to_string()),
+            aux_redis_bits: Some("64".to_string()),
+            aux_ctime: Some("1703080200".to_string()),
+            aux_used_men: Some("1012368".to_string()),
+            values: HashMap::from([
+                (RedisString::new(b"foo"), RedisString::new(b"bar")),
+                (RedisString::new(b"k2"), RedisString::new(b"v2")),
+            ]),
+            expiry: HashMap::from([(RedisString::new(b"foo"), 1703081197600)]),
+        })
+    );
+}
