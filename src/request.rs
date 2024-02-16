@@ -12,6 +12,7 @@ pub enum Request {
     Keys,
     ConfigGet(RedisString),
     UnhandledCommand,
+    InfoReplication,
 }
 
 impl Request {
@@ -22,6 +23,12 @@ impl Request {
             Message::Array(args) => match &args[..] {
                 // Debug commands
                 [Message::Binary(arg1)] if arg1.eq_ignore_ascii_case(b"PING") => Self::Ping,
+                [Message::Binary(arg1), Message::Binary(arg2)]
+                    if arg1.eq_ignore_ascii_case(b"INFO")
+                        && arg2.eq_ignore_ascii_case(b"replication") =>
+                {
+                    Self::InfoReplication
+                }
                 [Message::Binary(arg1), Message::Binary(data)]
                     if arg1.eq_ignore_ascii_case(b"ECHO") =>
                 {

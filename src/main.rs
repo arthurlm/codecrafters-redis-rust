@@ -7,6 +7,7 @@ use std::{
 
 use redis_starter_rust::{
     database::Database, error::MiniRedisError, rdb::Rdb, request::Request, response::Response,
+    ServerMode,
 };
 use tokio::{
     fs,
@@ -90,6 +91,15 @@ async fn handle_client(
 
         let response = match request {
             Request::Ping => Response::Pong,
+            Request::InfoReplication => Response::InfoReplication {
+                role: ServerMode::Master,
+                master_replid: "".to_string(),
+                master_repl_offset: 0,
+                repl_backlog_active: 0,
+                repl_backlog_size: 0,
+                repl_backlog_first_byte_offset: 0,
+                repl_backlog_histlen: 0,
+            },
             Request::Echo(data) => Response::Echo(data),
             Request::Get(key) => match db.get(key).await {
                 Some(data) => Response::Content(data),
