@@ -18,6 +18,7 @@ use tokio::{
 async fn main() {
     let dir = parse_cli_dir().unwrap_or_else(env::temp_dir);
     let dbfilename = parse_cli_dbfilename().unwrap_or_else(|| PathBuf::from("dump.rdb"));
+    let port = parse_cli_port().unwrap_or(6379);
 
     // Create DBs
     let config = Arc::new(Database::new());
@@ -41,7 +42,7 @@ async fn main() {
     }
 
     // Startup server
-    let listener = TcpListener::bind("127.0.0.1:6379")
+    let listener = TcpListener::bind(("127.0.0.1", port))
         .await
         .expect("Fail to start TCP server");
 
@@ -65,6 +66,12 @@ fn parse_cli_dir() -> Option<PathBuf> {
 
 fn parse_cli_dbfilename() -> Option<PathBuf> {
     let index = env::args().position(|x| x == "--dbfilename")?;
+    let value = env::args().nth(index + 1)?;
+    value.parse().ok()
+}
+
+fn parse_cli_port() -> Option<u16> {
+    let index = env::args().position(|x| x == "--port")?;
     let value = env::args().nth(index + 1)?;
     value.parse().ok()
 }
